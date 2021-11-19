@@ -1,6 +1,6 @@
 # SufferSync
 
-SufferSync gets upcoming workouts from your Wahoo SYSTM training plan and creates .zwo files from those workouts. These can be used in other platforms and the app will sync this automatically with your [intervals.icu](https://intervals.icu) account if you setup your API credentials.
+SufferSync gets upcoming workouts from your Wahoo SYSTM training plan and syncs these with [intervals.icu](https://intervals.icu).
 
 ## Getting Started
 - Make sure you have Python 3 with the `requests` and `dateutil` packages. You can install these as follows:
