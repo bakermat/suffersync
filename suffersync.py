@@ -17,6 +17,10 @@ START_DATE = "2021-11-01T00:00:00.000Z"
 END_DATE = "2021-12-31T23:59:59.999Z"
 INTERVALS_ICU_ID = "i00000"
 INTERVALS_ICU_APIKEY = "xxxxxxxxxxxxx"
+# Change this to 1 if you want to upload yoga workouts to intervals.icu
+UPLOAD_YOGA_WORKOUTS = 0
+# Change this to 1 if you want to upload past SYSTM workouts to intervals.icu
+UPLOAD_PAST_WORKOUTS = 0
 
 
 # Don't change anything below this line
@@ -81,6 +85,27 @@ def get_systm_workout(url, token, workout_id):
     }
 
     response = call_api(url, headers, payload).text
+    return response
+
+
+def upload_to_intervals_icu(date, filename, contents):
+    url = f'https://intervals.icu/api/v1/athlete/{INTERVALS_ICU_ID}/events'
+
+    payload = json.dumps({
+        "category": "WORKOUT",
+        "start_date_local": date,
+        "type": "Ride",
+        "filename": filename,
+        "file_contents": contents
+    })
+
+    token = b64encode(f'API_KEY:{INTERVALS_ICU_APIKEY}'.encode()).decode()
+    headers = {
+        'Authorization': f'Basic {token}',
+        'Content-Type': 'text/plain'
+    }
+
+    response = call_api(url, headers, payload)
     return response
 
 
@@ -158,8 +183,8 @@ def main():
                 workout_json = json.loads(workout_detail)
                 sport = workout_json['data']['workouts'][0]['sport']
 
-                # Skip yoga workouts
-                if sport == 'Yoga':
+                # Skip yoga workouts if UPLOAD_YOGA_WORKOUTS = 0
+                if sport == 'Yoga' and not UPLOAD_YOGA_WORKOUTS:
                     continue
 
                 # 'triggers' contains the FTP values for the workout
@@ -212,25 +237,10 @@ def main():
                 intervals_filename = f'{filename_zwo[17:]}'
                 file_contents = zwo_file.read()
 
-                if date > today:
-                    intervals_icu_url = f'https://intervals.icu/api/v1/athlete/{INTERVALS_ICU_ID}/events'
-
-                    intervals_icu_payload = json.dumps({
-                        "category": "WORKOUT",
-                        "start_date_local": file_date,
-                        "type": "Ride",
-                        "filename": intervals_filename,
-                        "file_contents": file_contents
-                    })
-
-                    interval_icu_token = b64encode(f'API_KEY:{INTERVALS_ICU_APIKEY}'.encode()).decode()
-                    interval_icu_headers = {
-                        'Authorization': f'Basic {interval_icu_token}',
-                        'Content-Type': 'text/plain'
-                    }
-
-                    call_api(intervals_icu_url, interval_icu_headers, intervals_icu_payload)
-                    print(f'Uploaded {intervals_filename}')
+                if date > today or UPLOAD_PAST_WORKOUTS:
+                    response = upload_to_intervals_icu(file_date, intervals_filename, file_contents)
+                    if response.status_code == 200:
+                        print(f'Uploaded {intervals_filename}')
 
                 zwo_file.close()
             except Exception as err:
