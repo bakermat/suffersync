@@ -151,12 +151,9 @@ def main():
     # For each workout, make sure there's a "plannedDate" field to avoid bogus entries.
     for item in workouts:
         if item['plannedDate']:
-            # Get plannedDate, convert to UTC DateTime and then to local timezone
+            # Get plannedDate in localtime, convert to date_short for filenaming
             planned_date = item['plannedDate']
-            dt_planned_date = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-            timezone = tz.gettz(item['appliedTimeZone'])
-            dt_workout_date_utc = dt_planned_date.replace(tzinfo=tz.gettz('UTC'))
-            dt_workout_date_local = dt_workout_date_utc.astimezone(timezone)
+            dt_workout_date_local = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             dt_workout_date_short = dt_workout_date_local.strftime("%Y-%m-%d")
 
             # Get workout name and remove invalid characters to avoid filename issues.
