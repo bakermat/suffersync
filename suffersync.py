@@ -43,7 +43,18 @@ def get_systm_token(url, username, password):
     response = call_api(url, headers, payload)
     response_json = response.json()
     token = response_json['data']['loginUser']['token']
+    rider_profile = response_json['data']['loginUser']['user']['profiles']['riderProfile']
+    get_systm_profile(rider_profile)
     return token
+
+
+def get_systm_profile(profile):
+    # Get user's 4DP profile and set as global variables
+    global rider_ac, rider_nm, rider_map, rider_ftp
+    rider_ac = profile['ac']
+    rider_nm = profile['nm']
+    rider_map = profile['map']
+    rider_ftp = profile['ftp']
 
 
 def get_systm_workouts(url, token, start_date, end_date):
@@ -207,21 +218,27 @@ def main():
                             for item in workout_json[interval]['tracks'][tracks]['objects']:
                                 seconds = int(item['size'] / 1000)
                                 if 'ftp' in item['parameters']:
-                                    ftp = item['parameters']['ftp']['value']
+                                    power = item['parameters']['ftp']['value']
                                 # Not sure if required, in my data this always seems to be the same as ftp
                                 if 'twentyMin' in item['parameters']:
                                     twentyMin = item['parameters']['twentyMin']['value']
-                                    ftp = max(ftp, twentyMin)
+                                    power = max(power, twentyMin)
                                 # If map value exists, set ftp to the higher value of either map or ftp.
                                 if 'map' in item['parameters']:
-                                    map = item['parameters']['map']['value']
-                                    ftp = max(ftp, map)
-                                if ftp:
+                                    map = item['parameters']['map']['value'] * round(rider_map / rider_ftp, 2)
+                                    power = max(power, map)
+                                if 'ac' in item['parameters']:
+                                    ac = item['parameters']['ac']['value'] * round(rider_ac / rider_ftp, 2)
+                                    power = max(power, ac)
+                                if 'nm' in item['parameters']:
+                                    nm = item['parameters']['nm']['value'] * round(rider_nm / rider_ftp, 2)
+                                    power = max(power, nm)
+                                if power:
                                     if 'rpm' in item['parameters']:
                                         rpm = item['parameters']['rpm']['value']
-                                        text = f'\n\t\t<SteadyState show_avg="1" Cadence="{rpm}" Power="{ftp}" Duration="{seconds}"/>'
+                                        text = f'\n\t\t<SteadyState show_avg="1" Cadence="{rpm}" Power="{power}" Duration="{seconds}"/>'
                                     else:
-                                        text = f'\n\t\t<SteadyState show_avg="1" Power="{ftp}" Duration="{seconds}"/>'
+                                        text = f'\n\t\t<SteadyState show_avg="1" Power="{power}" Duration="{seconds}"/>'
                                     f.write(text)
                     text = r"""
     </workout>
