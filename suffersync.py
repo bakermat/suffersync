@@ -150,7 +150,7 @@ def main():
     # For each workout, make sure there's a "plannedDate" field to avoid bogus entries.
     for item in workouts:
         if item['plannedDate']:
-            # Get plannedDate in localtime, convert to date_short for filenaming
+            # Get plannedDate, convert to date_short for filenaming
             planned_date = item['plannedDate']
             dt_workout_date = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             dt_workout_date_short = dt_workout_date.strftime("%Y-%m-%d")
