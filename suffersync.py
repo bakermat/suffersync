@@ -4,7 +4,6 @@ import re
 import os
 import sys
 from datetime import datetime
-from dateutil import tz
 from base64 import b64encode
 
 ########################################################################################################
@@ -153,8 +152,8 @@ def main():
         if item['plannedDate']:
             # Get plannedDate in localtime, convert to date_short for filenaming
             planned_date = item['plannedDate']
-            dt_workout_date_local = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-            dt_workout_date_short = dt_workout_date_local.strftime("%Y-%m-%d")
+            dt_workout_date = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+            dt_workout_date_short = dt_workout_date.strftime("%Y-%m-%d")
 
             # Get workout name and remove invalid characters to avoid filename issues.
             workout_name = item['prospects'][0]['name']
@@ -209,6 +208,15 @@ def main():
                                 seconds = int(item['size'] / 1000)
                                 if 'ftp' in item['parameters']:
                                     ftp = item['parameters']['ftp']['value']
+                                # Not sure if required, in my data this always seems to be the same as ftp
+                                if 'twentyMin' in item['parameters']:
+                                    twentyMin = item['parameters']['twentyMin']['value']
+                                    ftp = max(ftp, twentyMin)
+                                # If map value exists, set ftp to the higher value of either map or ftp.
+                                if 'map' in item['parameters']:
+                                    map = item['parameters']['map']['value']
+                                    ftp = max(ftp, map)
+                                if ftp:
                                     if 'rpm' in item['parameters']:
                                         rpm = item['parameters']['rpm']['value']
                                         text = f'\n\t\t<SteadyState show_avg="1" Cadence="{rpm}" Power="{ftp}" Duration="{seconds}"/>'

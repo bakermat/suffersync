@@ -13,9 +13,6 @@ SufferSync gets upcoming workouts from your Wahoo SYSTM training plan and syncs 
     - By default only future workouts are included and yoga workouts are ignored, change the respective values if you want past workouts or yoga workouts to be synced.
 - Run the app with `python3 ./suffersync.py`
 
-## Caveats
-A small minority of rides might not be a 100% match, which could be due to level mode or workout information missing. Examples are _Half Monty_, _The Stig_ and _ProRides: Strade Bianchi 1_ ride from my quick observation.
-
 ## Disclaimer
 This website is in no way affiliated with either Wahoo SYSTM or https://intervals.icu. It was developed for personal use and is not supported. I welcome pull requests if you want to contribute.
 
