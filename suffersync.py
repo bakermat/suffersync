@@ -1,3 +1,4 @@
+import configparser
 import requests
 import json
 import re
@@ -6,23 +7,35 @@ import sys
 from datetime import datetime
 from base64 import b64encode
 
-########################################################################################################
-# Change these to your own Wahoo SYSTM credentials & intervals.icu                                     #
-# Setup the dates you want to get the workouts for, only future workouts will be sent to intervals.icu #
-########################################################################################################
-SYSTM_USERNAME = 'your_systm_username'
-SYSTM_PASSWORD = 'your_systm_password'
-START_DATE = "2021-11-01T00:00:00.000Z"
-END_DATE = "2021-12-31T23:59:59.999Z"
-INTERVALS_ICU_ID = "i00000"
-INTERVALS_ICU_APIKEY = "xxxxxxxxxxxxx"
+
+def write_configfile(config, filename):
+    text = r"""
+[DEFAULT]
 # Change this to 1 if you want to upload yoga workouts to intervals.icu
 UPLOAD_YOGA_WORKOUTS = 0
 # Change this to 1 if you want to upload past SYSTM workouts to intervals.icu
 UPLOAD_PAST_WORKOUTS = 0
 
+[WAHOO]
+# Your Wahoo SYSTM credentials
+SYSTM_USERNAME = your_systm_username
+SYSTM_PASSWORD = your_systm_password
 
-# Don't change anything below this line
+# Start and end date of workouts you want to send to intervals.icu.
+# Use YYYY-MM-DD format
+START_DATE = 2021-11-01
+END_DATE = 2021-12-31
+
+[INTERVALS.ICU]
+# Your intervals.icu API ID and API key
+INTERVALS_ICU_ID = i00000
+INTERVALS_ICU_APIKEY = xxxxxxxxxxxxx
+"""
+    with open(filename, 'w') as configfile:
+        configfile.write(text)
+    print(f'Created {filename}. Add your user details to that file and run suffersync again.')
+    sys.exit(0)
+
 def get_systm_token(url, username, password):
     payload = json.dumps({
         "operationName": "Login",
@@ -41,6 +54,9 @@ def get_systm_token(url, username, password):
     headers = {'Content-Type': 'application/json'}
 
     response = call_api(url, headers, payload)
+    if 'login.badUserOrPassword' in response.text:
+        print(f'Invalid Wahoo SYSTM username or password. Please check your settings and try again.')
+        sys.exit(1)
     response_json = response.json()
     token = response_json['data']['loginUser']['token']
     rider_profile = response_json['data']['loginUser']['user']['profiles']['riderProfile']
@@ -61,8 +77,8 @@ def get_systm_workouts(url, token, start_date, end_date):
     payload = json.dumps({
         "operationName": "GetUserPlansRange",
         "variables": {
-            "startDate": start_date,
-            "endDate": end_date,
+            "startDate": f"{start_date}T00:00:00.000Z",
+            "endDate": f"{end_date}T23:59:59.999Z",
             "queryParams": {
                 "limit": 1000
             }
@@ -98,8 +114,8 @@ def get_systm_workout(url, token, workout_id):
     return response
 
 
-def upload_to_intervals_icu(date, filename, contents):
-    url = f'https://intervals.icu/api/v1/athlete/{INTERVALS_ICU_ID}/events'
+def upload_to_intervals_icu(date, filename, contents, userid, api_key):
+    url = f'https://intervals.icu/api/v1/athlete/{userid}/events'
 
     payload = json.dumps({
         "category": "WORKOUT",
@@ -109,7 +125,7 @@ def upload_to_intervals_icu(date, filename, contents):
         "file_contents": contents
     })
 
-    token = b64encode(f'API_KEY:{INTERVALS_ICU_APIKEY}'.encode()).decode()
+    token = b64encode(f'API_KEY:{api_key}'.encode()).decode()
     headers = {
         'Authorization': f'Basic {token}',
         'Content-Type': 'text/plain'
@@ -143,6 +159,28 @@ def clean_workout(workout):
 
 
 def main():
+    # Read config file
+    CONFIGFILE = 'suffersync.cfg'
+    config = configparser.ConfigParser()
+
+    config_exists = os.path.exists(CONFIGFILE)
+    if config_exists:
+        try:
+            config.read(CONFIGFILE)
+            UPLOAD_YOGA_WORKOUTS = int(config['DEFAULT']['UPLOAD_YOGA_WORKOUTS'])
+            UPLOAD_PAST_WORKOUTS = int(config['DEFAULT']['UPLOAD_PAST_WORKOUTS'])
+            SYSTM_USERNAME = config['WAHOO']['SYSTM_USERNAME']
+            SYSTM_PASSWORD = config['WAHOO']['SYSTM_PASSWORD']
+            START_DATE = config['WAHOO']['START_DATE']
+            END_DATE = config['WAHOO']['END_DATE']
+            INTERVALS_ICU_ID = config['INTERVALS.ICU']['INTERVALS_ICU_ID']
+            INTERVALS_ICU_APIKEY = config['INTERVALS.ICU']['INTERVALS_ICU_APIKEY']
+        except KeyError:
+            print(f'Could not read {CONFIGFILE}. Please check again.')
+            sys.exit(1)
+    else:
+        write_configfile(config, CONFIGFILE)
+
     SYSTM_URL = "https://api.thesufferfest.com/graphql"
 
     # Get Wahoo SYSTM auth token
@@ -194,6 +232,13 @@ def main():
                 if sport == 'Yoga' and not UPLOAD_YOGA_WORKOUTS:
                     continue
 
+                if sport == 'Cycling':
+                    sporttype = 'bike'
+                elif sport == 'Yoga':
+                    sporttype = 'yoga'
+                elif sport == 'Running':
+                    sporttype = 'run'
+
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
@@ -202,13 +247,13 @@ def main():
                     f.write('No workout data found.')
                     f.close()
                 else:
-                    text = r"""
+                    text = f"""
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workout_file>
     <author></author>
     <name></name>
     <description></description>
-    <sportType>bike</sportType>
+    <sportType>{sporttype}</sportType>
     <tags/>
     <workout>"""
                     f.write(text)
@@ -261,7 +306,7 @@ def main():
                 file_contents = zwo_file.read()
 
                 if date > today or UPLOAD_PAST_WORKOUTS:
-                    response = upload_to_intervals_icu(file_date, intervals_filename, file_contents)
+                    response = upload_to_intervals_icu(file_date, intervals_filename, file_contents, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
                     if response.status_code == 200:
                         print(f'Uploaded {intervals_filename}')
 
