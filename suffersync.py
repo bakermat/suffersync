@@ -216,6 +216,7 @@ def main():
                     for interval in range(len(workout_json)):
                         for tracks in range(len(workout_json[interval]['tracks'])):
                             for item in workout_json[interval]['tracks'][tracks]['objects']:
+                                power = None
                                 seconds = int(item['size'] / 1000)
                                 if 'ftp' in item['parameters']:
                                     power = item['parameters']['ftp']['value']
