@@ -36,6 +36,7 @@ INTERVALS_ICU_APIKEY = xxxxxxxxxxxxx
     print(f'Created {filename}. Add your user details to that file and run suffersync again.')
     sys.exit(0)
 
+
 def get_systm_token(url, username, password):
     payload = json.dumps({
         "operationName": "Login",
@@ -55,7 +56,7 @@ def get_systm_token(url, username, password):
 
     response = call_api(url, headers, payload)
     if 'login.badUserOrPassword' in response.text:
-        print(f'Invalid Wahoo SYSTM username or password. Please check your settings and try again.')
+        print('Invalid Wahoo SYSTM username or password. Please check your settings and try again.')
         sys.exit(1)
     response_json = response.json()
     token = response_json['data']['loginUser']['token']
@@ -232,6 +233,8 @@ def main():
                 if sport == 'Yoga' and not UPLOAD_YOGA_WORKOUTS:
                     continue
 
+                # As of Dec 2021: Wahoo SYSTM's runs don't have workout data so upload to intervals.icu will fail.
+                # As of Dec 2021: Intervals.icu classifies ZWO workouts with 'yoga' type as a bike ride.
                 if sport == 'Cycling':
                     sporttype = 'bike'
                 elif sport == 'Yoga':
