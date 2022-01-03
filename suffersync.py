@@ -242,7 +242,7 @@ def main():
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
-                f = open(filename_zwo, "a")
+                f = open(filename_zwo, "w")
                 if not workout_json:
                     f.write('No workout data found.')
                     f.close()
