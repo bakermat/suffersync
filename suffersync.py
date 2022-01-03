@@ -305,7 +305,7 @@ def main():
                 intervals_filename = f'{filename_zwo[17:]}'
                 file_contents = zwo_file.read()
 
-                if date > today or UPLOAD_PAST_WORKOUTS:
+                if date >= today or UPLOAD_PAST_WORKOUTS:
                     response = upload_to_intervals_icu(file_date, intervals_filename, file_contents, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
                     if response.status_code == 200:
                         print(f'Uploaded {intervals_filename}')
