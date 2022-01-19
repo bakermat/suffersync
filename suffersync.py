@@ -213,6 +213,8 @@ def main():
 
             try:
                 workout_id = item['prospects'][0]['workoutId']
+                if workout_id == "":
+                    continue
             except Exception as err:
                 print(f'Error: {err}')
 
@@ -315,7 +317,7 @@ def main():
 
                 zwo_file.close()
             except Exception as err:
-                print(f'Something went wrong with {intervals_filename}: {err}')
+                print(f'Something went wrong: {err}')
 
 
 if __name__ == "__main__":
