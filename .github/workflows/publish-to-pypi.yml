@@ -15,6 +15,7 @@ jobs:
     - name: Build a binary wheel and a source tarball
       run: python -m build --sdist --wheel --outdir dist/ .
     - name: Publish distribution to Test PyPI
+      if: endsWith(github.ref, 'dev')
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
