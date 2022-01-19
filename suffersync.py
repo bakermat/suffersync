@@ -6,19 +6,20 @@ import os
 import sys
 from datetime import datetime
 from base64 import b64encode
+from xml.sax.saxutils import escape as escape_xml
 
 
 def write_configfile(config, filename):
     text = r"""
 [DEFAULT]
-# Change this to 0 if you do NOT want to upload strength workouts to intervals.icu
-UPLOAD_RUN_WORKOUTS = 1
-# Change this to 1 if you want to upload strength workouts to intervals.icu
+# Change these to 1 if you want to upload the respective workouts to intervals.icu
+UPLOAD_RUN_WORKOUTS = 0
+UPLOAD_SWIM_WORKOUTS = 0
 UPLOAD_STRENGTH_WORKOUTS = 0
-# Change this to 1 if you want to upload yoga workouts to intervals.icu
 UPLOAD_YOGA_WORKOUTS = 0
 # Change this to 1 if you want to upload past SYSTM workouts to intervals.icu
 UPLOAD_PAST_WORKOUTS = 0
+UPLOAD_DESCRIPTION = 0
 
 [WAHOO]
 # Your Wahoo SYSTM credentials
@@ -50,6 +51,8 @@ def get_intervals_sport(sport):
         return "Yoga"
     elif sport == "Strength":
         return "WeightTraining"
+    elif sport == "Swimming":
+        return "Swim"
 
 
 def get_systm_token(url, username, password):
@@ -141,6 +144,7 @@ def upload_to_intervals_icu(date, name, sport, userid, api_key, contents=None, m
             "filename": name,
             "file_contents": contents
         })
+
     else:
         payload = json.dumps({
             "start_date_local": date,
@@ -191,7 +195,9 @@ def main():
             UPLOAD_PAST_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_PAST_WORKOUTS', fallback=0)
             UPLOAD_STRENGTH_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_STRENGTH_WORKOUTS', fallback=0)
             UPLOAD_YOGA_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_YOGA_WORKOUTS', fallback=0)
-            UPLOAD_RUN_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_RUN_WORKOUTS', fallback=1)
+            UPLOAD_RUN_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_RUN_WORKOUTS', fallback=0)
+            UPLOAD_SWIM_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_SWIM_WORKOUTS', fallback=0)
+            UPLOAD_DESCRIPTION = config.getint('DEFAULT', 'UPLOAD_DESCRIPTION', fallback=0)
             SYSTM_USERNAME = config.get('WAHOO', 'SYSTM_USERNAME')
             SYSTM_PASSWORD = config.get('WAHOO', 'SYSTM_PASSWORD')
             START_DATE = config.get('WAHOO', 'START_DATE')
@@ -255,6 +261,8 @@ def main():
                         continue
                     elif sport == 'Run' and not UPLOAD_RUN_WORKOUTS:
                         continue
+                    elif sport == 'Swim' and not UPLOAD_SWIM_WORKOUTS:
+                        continue
                     else:
                         response = upload_to_intervals_icu(date, workout_name, sport, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY, description=description, moving_time=moving_time)
                         if response.status_code == 200:
@@ -278,7 +286,13 @@ def main():
                 if sport == 'Ride':
                     sporttype = 'bike'
 
-                description = workout_json['data']['workouts'][0]['details'] or ''
+                # If UPLOAD_DESCRIPTION is set, change description of workout to Wahoo SYSTM's description.
+                description = ''
+
+                if UPLOAD_DESCRIPTION:
+                    description = workout_json['data']['workouts'][0]['details']
+                    description = escape_xml(description)
+
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
