@@ -145,17 +145,12 @@ def call_api(url, headers, payload):
 
 
 def clean_workout(workout):
-    # Remove the details section, too many string errors.
-    regex = r"(\"details.*?)(?=\"l)"
-    workout = re.sub(regex, "", workout, 0, re.MULTILINE)
-    # Remove '\\\"' in the trigger section
-    workout = workout.replace("\\\\\\\"", "")
-    # Remove the '\\', mostly seen in the trigger section
-    workout = workout.replace("\\", "")
-    # Make sure that the 'triggers' section is JSON compliant, remove the " at the start and end.
-    workout = workout.replace('"triggers":"', '"triggers":')
-    workout = workout.replace('","featuredRaces"', ',"featuredRaces"')
-    return workout
+    workout_json = json.loads(workout)
+
+    # workout ['data']['workouts'][0]['triggers'] appears to be a JSON string
+    workout_json['data']['workouts'][0]['triggers'] = json.loads(workout_json['data']['workouts'][0]['triggers'])
+
+    return workout_json
 
 
 def main():
@@ -223,9 +218,9 @@ def main():
             os.makedirs(os.path.dirname(filename_zwo), exist_ok=True)
 
             try:
-                # Workout details are not clean JSON, so use clean_workout() before loading as JSON
-                workout_detail = clean_workout(workout_detail)
-                workout_json = json.loads(workout_detail)
+                # Workout details contain nested JSON, so use clean_workout()
+                # to handle this.
+                workout_json = clean_workout(workout_detail)
                 sport = workout_json['data']['workouts'][0]['sport']
 
                 # Skip yoga workouts if UPLOAD_YOGA_WORKOUTS = 0
