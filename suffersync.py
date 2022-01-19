@@ -6,6 +6,7 @@ import os
 import sys
 from datetime import datetime
 from base64 import b64encode
+from xml.sax.saxutils import escape as escape_xml
 
 
 def write_configfile(config, filename):
@@ -234,6 +235,7 @@ def main():
                 elif sport == 'Running':
                     sporttype = 'run'
 
+                description = workout_json['data']['workouts'][0]['details'] or ''
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
@@ -247,7 +249,7 @@ def main():
 <workout_file>
     <author></author>
     <name></name>
-    <description></description>
+    <description>{description}</description>
     <sportType>{sporttype}</sportType>
     <tags/>
     <workout>"""
