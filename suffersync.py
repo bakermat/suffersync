@@ -6,12 +6,15 @@ import os
 import sys
 from datetime import datetime
 from base64 import b64encode
-from xml.sax.saxutils import escape as escape_xml
 
 
 def write_configfile(config, filename):
     text = r"""
 [DEFAULT]
+# Change this to 0 if you do NOT want to upload strength workouts to intervals.icu
+UPLOAD_RUN_WORKOUTS = 1
+# Change this to 1 if you want to upload strength workouts to intervals.icu
+UPLOAD_STRENGTH_WORKOUTS = 0
 # Change this to 1 if you want to upload yoga workouts to intervals.icu
 UPLOAD_YOGA_WORKOUTS = 0
 # Change this to 1 if you want to upload past SYSTM workouts to intervals.icu
@@ -24,8 +27,8 @@ SYSTM_PASSWORD = your_systm_password
 
 # Start and end date of workouts you want to send to intervals.icu.
 # Use YYYY-MM-DD format
-START_DATE = 2021-11-01
-END_DATE = 2021-12-31
+START_DATE = 2022-01-01
+END_DATE = 2022-12-31
 
 [INTERVALS.ICU]
 # Your intervals.icu API ID and API key
@@ -36,6 +39,18 @@ INTERVALS_ICU_APIKEY = xxxxxxxxxxxxx
         configfile.write(text)
     print(f'Created {filename}. Add your user details to that file and run suffersync again.')
     sys.exit(0)
+
+
+def get_intervals_sport(sport):
+    if sport == "Cycling":
+        return "Ride"
+    elif sport == "Running":
+        return "Run"
+    elif sport == "Yoga":
+        return "Yoga"
+    elif sport == "Strength":
+        return "WeightTraining"
+
 
 def get_systm_token(url, username, password):
     payload = json.dumps({
@@ -56,7 +71,7 @@ def get_systm_token(url, username, password):
 
     response = call_api(url, headers, payload)
     if 'login.badUserOrPassword' in response.text:
-        print(f'Invalid Wahoo SYSTM username or password. Please check your settings and try again.')
+        print('Invalid Wahoo SYSTM username or password. Please check your settings and try again.')
         sys.exit(1)
     response_json = response.json()
     token = response_json['data']['loginUser']['token']
@@ -115,16 +130,26 @@ def get_systm_workout(url, token, workout_id):
     return response
 
 
-def upload_to_intervals_icu(date, filename, contents, userid, api_key):
+def upload_to_intervals_icu(date, name, sport, userid, api_key, contents=None, moving_time=None, description=None):
     url = f'https://intervals.icu/api/v1/athlete/{userid}/events'
 
-    payload = json.dumps({
-        "category": "WORKOUT",
-        "start_date_local": date,
-        "type": "Ride",
-        "filename": filename,
-        "file_contents": contents
-    })
+    if sport == "Ride":
+        payload = json.dumps({
+            "category": "WORKOUT",
+            "start_date_local": date,
+            "type": sport,
+            "filename": name,
+            "file_contents": contents
+        })
+    else:
+        payload = json.dumps({
+            "start_date_local": date,
+            "description": description,
+            "category": "WORKOUT",
+            "name": name,
+            "type": sport,
+            "moving_time": moving_time
+        })
 
     token = b64encode(f'API_KEY:{api_key}'.encode()).decode()
     headers = {
@@ -163,16 +188,18 @@ def main():
     if config_exists:
         try:
             config.read(CONFIGFILE)
-            UPLOAD_YOGA_WORKOUTS = int(config['DEFAULT']['UPLOAD_YOGA_WORKOUTS'])
-            UPLOAD_PAST_WORKOUTS = int(config['DEFAULT']['UPLOAD_PAST_WORKOUTS'])
-            SYSTM_USERNAME = config['WAHOO']['SYSTM_USERNAME']
-            SYSTM_PASSWORD = config['WAHOO']['SYSTM_PASSWORD']
-            START_DATE = config['WAHOO']['START_DATE']
-            END_DATE = config['WAHOO']['END_DATE']
-            INTERVALS_ICU_ID = config['INTERVALS.ICU']['INTERVALS_ICU_ID']
-            INTERVALS_ICU_APIKEY = config['INTERVALS.ICU']['INTERVALS_ICU_APIKEY']
-        except KeyError:
-            print(f'Could not read {CONFIGFILE}. Please check again.')
+            UPLOAD_PAST_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_PAST_WORKOUTS', fallback=0)
+            UPLOAD_STRENGTH_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_STRENGTH_WORKOUTS', fallback=0)
+            UPLOAD_YOGA_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_YOGA_WORKOUTS', fallback=0)
+            UPLOAD_RUN_WORKOUTS = config.getint('DEFAULT', 'UPLOAD_RUN_WORKOUTS', fallback=1)
+            SYSTM_USERNAME = config.get('WAHOO', 'SYSTM_USERNAME')
+            SYSTM_PASSWORD = config.get('WAHOO', 'SYSTM_PASSWORD')
+            START_DATE = config.get('WAHOO', 'START_DATE')
+            END_DATE = config.get('WAHOO', 'END_DATE')
+            INTERVALS_ICU_ID = config.get('INTERVALS.ICU', 'INTERVALS_ICU_ID')
+            INTERVALS_ICU_APIKEY = config.get('INTERVALS.ICU', 'INTERVALS_ICU_APIKEY')
+        except KeyError as err:
+            print(f'No valid value found for key {err} in {CONFIGFILE}.')
             sys.exit(1)
     else:
         write_configfile(config, CONFIGFILE)
@@ -202,12 +229,38 @@ def main():
 
             # Get workout name and remove invalid characters to avoid filename issues.
             workout_name = item['prospects'][0]['name']
-            workout_name = re.sub("[:]", "", workout_name)
-            workout_name = re.sub("[ ,./]", "_", workout_name)
-            filename = f'{dt_workout_date_short}_{workout_name}'
+            workout_name_remove_colon = re.sub("[:]", "", workout_name)
+            workout_name_underscores = re.sub("[ ,./]", "_", workout_name_remove_colon)
+            filename = f'{dt_workout_date_short}_{workout_name_underscores}'
 
             try:
                 workout_id = item['prospects'][0]['workoutId']
+                workout_type = item['prospects'][0]['type']
+
+                # get_intervals_sport will get the intervals.icu name for SYSTM's equivalent sport
+                sport = get_intervals_sport(workout_type)
+
+                # Skip workouts without detail and Mental Training workouts.
+                if workout_id == '' or workout_type == 'MentalTraining':
+                    continue
+                # Non-ride workouts (run, strength, yoga) contain no information apart from duration and name, upload separately.
+                if sport != 'Ride':
+                    date = f'{dt_workout_date_short}T00:00:00'
+                    description = item['prospects'][0]['description']
+                    moving_time = round(float(item['prospects'][0]['plannedDuration']) * 3600)
+
+                    if sport == 'Yoga' and not UPLOAD_YOGA_WORKOUTS:
+                        continue
+                    elif sport == 'WeightTraining' and not UPLOAD_STRENGTH_WORKOUTS:
+                        continue
+                    elif sport == 'Run' and not UPLOAD_RUN_WORKOUTS:
+                        continue
+                    else:
+                        response = upload_to_intervals_icu(date, workout_name, sport, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY, description=description, moving_time=moving_time)
+                        if response.status_code == 200:
+                            print(f'Uploaded {dt_workout_date_short}: {workout_name} ({sport})')
+                        continue
+
             except Exception as err:
                 print(f'Error: {err}')
 
@@ -219,27 +272,17 @@ def main():
             os.makedirs(os.path.dirname(filename_zwo), exist_ok=True)
 
             try:
-                # Workout details contain nested JSON, so use clean_workout()
-                # to handle this.
+                # Workout details contain nested JSON, so use clean_workout() to handle this.
                 workout_json = clean_workout(workout_detail)
-                sport = workout_json['data']['workouts'][0]['sport']
 
-                # Skip yoga workouts if UPLOAD_YOGA_WORKOUTS = 0
-                if sport == 'Yoga' and not UPLOAD_YOGA_WORKOUTS:
-                    continue
-
-                if sport == 'Cycling':
+                if sport == 'Ride':
                     sporttype = 'bike'
-                elif sport == 'Yoga':
-                    sporttype = 'yoga'
-                elif sport == 'Running':
-                    sporttype = 'run'
 
                 description = workout_json['data']['workouts'][0]['details'] or ''
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
-                f = open(filename_zwo, "a")
+                f = open(filename_zwo, "w")
                 if not workout_json:
                     f.write('No workout data found.')
                     f.close()
@@ -296,20 +339,20 @@ def main():
             try:
                 today = datetime.today()
                 zwo_file = open(filename_zwo, 'r')
-                date = filename_zwo[6:16]
-                file_date = f'{date}T00:00:00'
-                date = datetime.strptime(date, "%Y-%m-%d")
+                date_short = filename_zwo[6:16]
+                file_date = f'{date_short}T00:00:00'
+                date = datetime.strptime(date_short, "%Y-%m-%d")
                 intervals_filename = f'{filename_zwo[17:]}'
                 file_contents = zwo_file.read()
 
                 if date >= today or UPLOAD_PAST_WORKOUTS:
-                    response = upload_to_intervals_icu(file_date, intervals_filename, file_contents, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
+                    response = upload_to_intervals_icu(file_date, intervals_filename, sport, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY, contents=file_contents)
                     if response.status_code == 200:
-                        print(f'Uploaded {intervals_filename}')
+                        print(f'Uploaded {date_short}: {intervals_filename} ({sport})')
 
                 zwo_file.close()
             except Exception as err:
-                print(f'Something went wrong with {intervals_filename}: {err}')
+                print(f'Something went wrong: {err}')
 
 
 if __name__ == "__main__":
