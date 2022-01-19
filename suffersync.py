@@ -245,7 +245,7 @@ def main():
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
-                f = open(filename_zwo, "a")
+                f = open(filename_zwo, "w")
                 if not workout_json:
                     f.write('No workout data found.')
                     f.close()
@@ -308,7 +308,7 @@ def main():
                 intervals_filename = f'{filename_zwo[17:]}'
                 file_contents = zwo_file.read()
 
-                if date > today or UPLOAD_PAST_WORKOUTS:
+                if date >= today or UPLOAD_PAST_WORKOUTS:
                     response = upload_to_intervals_icu(file_date, intervals_filename, file_contents, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
                     if response.status_code == 200:
                         print(f'Uploaded {intervals_filename}')
