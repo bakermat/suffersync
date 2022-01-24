@@ -294,7 +294,6 @@ def main():
         sys.exit(0)
 
     today = datetime.today().date()
-    print('today',today)
 
     # For each workout, make sure there's a "plannedDate" field to avoid bogus entries.
     for item in workouts:
@@ -302,9 +301,7 @@ def main():
             # Get plannedDate, convert to datetime & formatted string for further use
             planned_date = item['plannedDate']
             workout_date_datetime = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ").date()
-            print('wdd',workout_date_datetime)
             workout_date_string = workout_date_datetime.strftime('%Y-%m-%dT%H:%M:%S')
-            print('wds',workout_date_string)
 
             # Get workout name and remove invalid characters to avoid filename issues.
             workout_name = item['prospects'][0]['name']
