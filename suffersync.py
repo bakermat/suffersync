@@ -259,7 +259,7 @@ def main():
 
     # Check CLI arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--delete', help='Delete all events in intervals.icu.', action='store', nargs='*')
+    parser.add_argument('-d', '--delete', help='Delete all events for the specified date range in intervals.icu.', action='store_true')
     args = parser.parse_args()
 
     # Get Wahoo SYSTM auth token
@@ -285,15 +285,16 @@ def main():
         events.append(event)
 
         # If -d/--delete CLI argument was provided, delete the workout.
-        if args.delete is not None:
+        if args.delete:
             print(f"Deleting workout {event['name']} on {event['start_date_local']}")
             delete_intervals_icu_event(event['id'], INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
 
-    if args.delete is not None:
+    if args.delete:
         print('All workouts removed, start suffersync again without any arguments.')
         sys.exit(0)
 
     today = datetime.today().date()
+    print('today',today)
 
     # For each workout, make sure there's a "plannedDate" field to avoid bogus entries.
     for item in workouts:
@@ -301,7 +302,9 @@ def main():
             # Get plannedDate, convert to datetime & formatted string for further use
             planned_date = item['plannedDate']
             workout_date_datetime = datetime.strptime(planned_date, "%Y-%m-%dT%H:%M:%S.%fZ").date()
+            print('wdd',workout_date_datetime)
             workout_date_string = workout_date_datetime.strftime('%Y-%m-%dT%H:%M:%S')
+            print('wds',workout_date_string)
 
             # Get workout name and remove invalid characters to avoid filename issues.
             workout_name = item['prospects'][0]['name']
