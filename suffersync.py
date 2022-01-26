@@ -233,7 +233,7 @@ def main():
     CONFIGFILE = 'suffersync.cfg'
     SYSTM_URL = "https://api.thesufferfest.com/graphql"
 
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(interpolation=None)
 
     config_exists = os.path.exists(CONFIGFILE)
     if config_exists:
