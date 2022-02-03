@@ -12,6 +12,10 @@ SufferSync syncs workouts from your Wahoo SYSTM training plan with [intervals.ic
     - Your intervals.icu athlete id & API key.
 - Run the app with `suffersync` or `python -m suffersync`.
 
+## Changes in v1.4.1
+- Improved handling of workouts without any data.
+- Improved handling of passwords that contain special characters.
+
 ## Changes in v1.4.0
 - Existing workouts in intervals.icu will now be overwritten when they have the same name to avoid duplicate uploads.
 - Special characters like '.' or ':' will now show up correctly in intervals.icu. If you upgraded from an older release, you might see a few duplicates for workouts that have a '.' or '/' in them, you will have to manually remove the ones without these characters from intervals.icu.
