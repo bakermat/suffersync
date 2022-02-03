@@ -373,8 +373,11 @@ def main():
 
                 f = open(filename_zwo, "w")
                 if not workout_json:
+                    # Report missing workout data and move to the next workout
+                    print(f'Workout {workout_name} does not contain any workout data.')
                     f.write('No workout data found.')
                     f.close()
+                    continue
                 else:
                     text = f"""
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
