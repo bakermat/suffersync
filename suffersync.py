@@ -418,9 +418,9 @@ def main():
                                 if power:
                                     if 'rpm' in item['parameters']:
                                         rpm = item['parameters']['rpm']['value']
-                                        text = f'\n\t\t<SteadyState show_avg="1" Cadence="{rpm}" Power="{power}" Duration="{seconds}"/>'
+                                        text = f'\n\t\t<SteadyState show_avg="1" Cadence="{rpm}" Power="{power}" Duration="{seconds}"/><!-- abs power: {absolute_power} -->'
                                     else:
-                                        text = f'\n\t\t<SteadyState show_avg="1" Power="{power}" Duration="{seconds}"/>'
+                                        text = f'\n\t\t<SteadyState show_avg="1" Power="{power}" Duration="{seconds}"/><!-- abs power: {absolute_power} -->'
                                     f.write(text)
                     text = r"""
     </workout>
