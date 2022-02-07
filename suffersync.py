@@ -400,17 +400,21 @@ def main():
                                 # Not sure if required, in my data this always seems to be the same as ftp
                                 if 'twentyMin' in item['parameters']:
                                     twentyMin = item['parameters']['twentyMin']['value']
-                                    power = max(power, twentyMin)
+                                    power = twentyMin
+                                    absolute_power = round(power * rider_ftp)
                                 # If map value exists, set ftp to the higher value of either map or ftp.
                                 if 'map' in item['parameters']:
                                     map = item['parameters']['map']['value'] * round(rider_map / rider_ftp, 2)
-                                    power = max(power, map)
+                                    power = map
+                                    absolute_power = round(power * rider_ftp)
                                 if 'ac' in item['parameters']:
                                     ac = item['parameters']['ac']['value'] * round(rider_ac / rider_ftp, 2)
-                                    power = max(power, ac)
+                                    power = ac
+                                    absolute_power = round(power * rider_ftp)
                                 if 'nm' in item['parameters']:
                                     nm = item['parameters']['nm']['value'] * round(rider_nm / rider_ftp, 2)
-                                    power = max(power, nm)
+                                    power = nm
+                                    absolute_power = round(power * rider_ftp)
                                 if power:
                                     if 'rpm' in item['parameters']:
                                         rpm = item['parameters']['rpm']['value']
