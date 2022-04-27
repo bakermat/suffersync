@@ -48,7 +48,7 @@ INTERVALS_ICU_APIKEY = xxxxxxxxxxxxx
 def get_intervals_sport(sport):
     """Translate Wahoo SYSTM sport type into intervals.icu type."""
     if sport == "Cycling":
-        return "Ride"
+        return "VirtualRide"
     elif sport == "Running":
         return "Run"
     elif sport == "Yoga":
@@ -184,7 +184,7 @@ def upload_to_intervals_icu(date, name, sport, userid, api_key, contents=None, m
         color = 'red'
         category = 'NOTE'
 
-    if sport == 'Ride':
+    if sport == 'VirtualRide':
         payload = json.dumps({
             "color": color,
             "category": category,
@@ -320,7 +320,7 @@ def main():
                 if workout_type == 'MentalTraining':
                     continue
                 # Non-ride workouts (run, strength, yoga) contain no information apart from duration and name, upload separately.
-                if sport != 'Ride':
+                if sport != 'VirtualRide':
                     description = item['prospects'][0]['description']
                     moving_time = round(float(item['prospects'][0]['plannedDuration']) * 3600)
 
@@ -357,7 +357,7 @@ def main():
                 # Workout details contain nested JSON, so use clean_workout() to handle this.
                 workout_json = clean_workout(workout_detail)
 
-                if sport == 'Ride':
+                if sport == 'VirtualRide':
                     sporttype = 'bike'
 
                 # If UPLOAD_DESCRIPTION is set, change description of workout to Wahoo SYSTM's description.
