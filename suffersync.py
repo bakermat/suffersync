@@ -15,6 +15,7 @@ def write_configfile(config, filename):
     """Create sufferfest.cfg file in current directory."""
     text = r"""
 [DEFAULT]
+# Note: Wahoo SYSTM ride workouts are synced by default
 # Change these to 1 if you want to upload the respective workouts to intervals.icu
 UPLOAD_RUN_WORKOUTS = 0
 UPLOAD_SWIM_WORKOUTS = 0
@@ -31,8 +32,8 @@ SYSTM_PASSWORD = your_systm_password
 
 # Start and end date of workouts you want to send to intervals.icu.
 # Use YYYY-MM-DD format
-START_DATE = 2022-01-01
-END_DATE = 2022-12-31
+START_DATE = 2023-09-01
+END_DATE = 2023-12-31
 
 [INTERVALS.ICU]
 # Your intervals.icu API ID and API key
@@ -367,6 +368,8 @@ def main():
                 if UPLOAD_DESCRIPTION and workout_json['data']['workouts'][0]['details']:
                     description = workout_json['data']['workouts'][0]['details']
                     description = escape_xml(description)
+                    # Replace 'km' in description, as intervals.icu uses it to show distance for an indoor workout.
+                    description = description.replace("km", " kilometres")
 
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
