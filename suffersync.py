@@ -39,7 +39,7 @@ END_DATE = 2022-12-31
 INTERVALS_ICU_ID = i00000
 INTERVALS_ICU_APIKEY = xxxxxxxxxxxxx
 """
-    with open(filename, 'w') as configfile:
+    with open(filename, 'w', encoding="utf-8") as configfile:
         configfile.write(text)
     print(f'Created {filename}. Add your user details to that file and run suffersync again.')
     sys.exit(0)
@@ -173,7 +173,7 @@ def get_intervals_icu_events(oldest, newest, userid, api_key):
 
 
 def upload_to_intervals_icu(date, name, sport, userid, api_key, contents=None, moving_time=None, description=None):
-    """Upload workout to to intervals.icu and return response."""
+    """Upload workout to intervals.icu and return response."""
     url = f'https://intervals.icu/api/v1/athlete/{userid}/events'
 
     # Set defaults
@@ -279,7 +279,7 @@ def main():
     # Store existing intervals.icu events, delete if -d CLI argument was provided
     for item in response_json:
         start_date_local = item['start_date_local']
-        start_date_local = datetime.strptime(start_date_local, "%Y-%m-%dT00:00:00").date()
+        start_date_local = datetime.strptime(start_date_local, "%Y-%m-%dT%H:%M:%S").date()
         # Store intervals.icu event date, name & id in 'event' list
         event = {"start_date_local": start_date_local, "name": item['name'], "id": item['id']}
         events.append(event)
@@ -371,7 +371,7 @@ def main():
                 # 'triggers' contains the FTP values for the workout
                 workout_json = workout_json['data']['workouts'][0]['triggers']
 
-                f = open(filename_zwo, "w")
+                f = open(filename_zwo, "w", encoding="utf-8")
                 if not workout_json:
                     # Report missing workout data and move to the next workout
                     print(f'Workout {workout_name} does not contain any workout data.')
@@ -437,7 +437,7 @@ def main():
                 intervals_filename = f'{filename_zwo[17:]}'
 
                 # Open .zwo file and read contents
-                zwo_file = open(filename_zwo, 'r')
+                zwo_file = open(filename_zwo, 'r', encoding="utf-8")
                 file_contents = zwo_file.read()
 
                 if workout_date_datetime >= today or UPLOAD_PAST_WORKOUTS:
