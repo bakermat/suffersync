@@ -152,7 +152,7 @@ def get_intervals_icu_headers(api_key):
     token = b64encode(f'API_KEY:{api_key}'.encode()).decode()
     headers = {
         'Authorization': f'Basic {token}',
-        'Content-Type': 'text/plain'
+        'Content-Type': 'application/json'
     }
     return headers
 
