@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name='suffersync',
-    version='1.4.3',
+    version='1.4.4',
     description='Syncs workouts from Wahoo SYSTM to intervals.icu',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',

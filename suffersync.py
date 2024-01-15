@@ -152,7 +152,7 @@ def get_intervals_icu_headers(api_key):
     token = b64encode(f'API_KEY:{api_key}'.encode()).decode()
     headers = {
         'Authorization': f'Basic {token}',
-        'Content-Type': 'text/plain'
+        'Content-Type': 'application/json'
     }
     return headers
 
@@ -306,8 +306,8 @@ def main():
 
             # Get workout name and remove invalid characters to avoid filename issues.
             workout_name = item['prospects'][0]['name']
-            workout_name_remove_colon = re.sub("[:]", "", workout_name)
-            workout_name_underscores = re.sub("[ ,./]", "_", workout_name_remove_colon)
+            workout_name_remove_invalid_chars = re.sub("[:?]", "", workout_name)
+            workout_name_underscores = re.sub("[ ,./]", "_", workout_name_remove_invalid_chars)
             filename = f'{workout_date_datetime}_{workout_name_underscores}'
 
             try:
@@ -382,14 +382,12 @@ def main():
                     f.close()
                     continue
                 else:
-                    text = f"""
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workout_file>
+                    text = f"""<workout_file>
     <author></author>
     <name>{workout_name}</name>
     <description>{description}</description>
     <sportType>{sporttype}</sportType>
-    <tags/>
+    <tags></tags>
     <workout>"""
                     f.write(text)
 
@@ -445,7 +443,7 @@ def main():
 
                 if workout_date_datetime >= today or UPLOAD_PAST_WORKOUTS:
                     for event in events:
-                        if event['start_date_local'] == workout_date_datetime and (event['name'] == workout_name or event['name'] == workout_name_remove_colon):
+                        if event['start_date_local'] == workout_date_datetime and (event['name'] == workout_name or event['name'] == workout_name_remove_invalid_chars):
                             print(f"Removing {workout_date_datetime}: {event['name']} (id {event['id']}).")
                             delete_intervals_icu_event(event['id'], INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY)
                     response = upload_to_intervals_icu(workout_date_string, intervals_filename, sport, INTERVALS_ICU_ID, INTERVALS_ICU_APIKEY, contents=file_contents)
